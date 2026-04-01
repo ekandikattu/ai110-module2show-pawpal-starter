@@ -84,12 +84,14 @@ Class Scheduler: (create/show schedules)
 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
 - What kinds of prompts or questions were most helpful?
+1. I used Copilot to brainstorm design choices, implement decision making i've made, debug issues with code changes, implement pytest test cases to very the code logic was implemented correctly, and other things.
+2. The concise prompts with the correct context were the most helpful to get exactly what I wanted out of the agent in one-shot. Also, changing to ask mode and asking clarifying, pointed questions helped me understand exactly the roadblock I was not getting from looking at the code myself.
 
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
 - How did you evaluate or verify what the AI suggested?
-
+1. I did not accept that the Task class had properly sorted the tasks since i did not see that logic in the agent output. I evaluated this by asking for a pytest test case to verify the sorting logic, and explain any problem and fix the agent had to make to get the test case to pass. In this way, it added the correct sorting logic and explained the mistake I had noticed.
 ---
 
 ## 4. Testing and Verification
@@ -98,12 +100,15 @@ Class Scheduler: (create/show schedules)
 
 - What behaviors did you test?
 - Why were these tests important?
+1. I tested pet creation/deletion, task creation/deletion, task sorting, schedule creation, and how all of the tasks and schedules changed ordering depending on filtering by time, priority, or preferences.
+2. These tests are important to ensure the code logic in the app works as intended. Safeguarding against bugs ensures a smooth experience for the user and also makes maintenance and future development safer and easier for both people who are new and old to the codebase.
 
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
 - What edge cases would you test next if you had more time?
-
+1. I am confident the scheduler works correctly, but I know that I still would like to confirm more edge cases at a future time to make sure its safe for a large user base. 
+2. I would test how adding the same task and description, along with the same priority affects the scheduling. Having two tasks be virtually identical would be interesting to see how it will parse them if they don't overlap in duration. Which one will be first? I also want to see what happens if I add a large amount of pets to a user and see how their schedule changes depending on different preferences.
 ---
 
 ## 5. Reflection
@@ -111,11 +116,14 @@ Class Scheduler: (create/show schedules)
 **a. What went well**
 
 - What part of this project are you most satisfied with?
+I am satisfied with the UML diagram creation and thought process that went into it.
 
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
+1. I would improve the conflict resolution logic to better respond to duration conflicts, since I think users will have that problem a lot (especially the busier ones).
 
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+It's important to understand how the app is supposed to function, and make sure that the AI understands your vision and the features you want to implement. The key is explaining everything clearly and concisely to develop a solid plan and design that will make a great app!

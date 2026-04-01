@@ -43,6 +43,11 @@ st.subheader("Quick Demo Inputs (UI only)")
 owner_name = st.text_input("Owner name", value="Jordan")
 pet_name = st.text_input("Pet name", value="Mochi")
 species = st.selectbox("Species", ["dog", "cat", "other"])
+preferences = st.text_input(
+    "Scheduling preferences (comma-separated)",
+    value="walk, medicine",
+    help="Examples: walk, medicine, grooming",
+)
 
 if "owner" not in st.session_state:
     st.session_state.owner = Owner(gender="unspecified", age=0, preferences="")
@@ -52,6 +57,8 @@ if "task_counter" not in st.session_state:
     st.session_state.task_counter = 1
 if "pet_counter" not in st.session_state:
     st.session_state.pet_counter = 1
+
+st.session_state.owner.setPreferences(preferences)
 
 if st.button("Add pet"):
     try:
@@ -111,7 +118,26 @@ if st.button("Add task"):
         st.error(str(err))
 
 if st.session_state.owner.tasks_ordered:
-    st.write("Current tasks:")
+    st.write("Current tasks (sorted)")
+
+    display_col1, display_col2 = st.columns(2)
+    with display_col1:
+        show_completed = st.checkbox("Show completed tasks", value=True)
+    with display_col2:
+        filter_pet_name = st.selectbox(
+            "Filter by pet",
+            options=["All"] + [pet.name for pet in st.session_state.owner.pets_ordered],
+            index=0,
+        )
+
+    is_completed_filter = None if show_completed else False
+    pet_name_filter = None if filter_pet_name == "All" else filter_pet_name
+    filtered_tasks = st.session_state.owner.filterTasks(
+        is_completed=is_completed_filter,
+        pet_name=pet_name_filter,
+    )
+    sorted_tasks = st.session_state.scheduler.organizeTasks(filtered_tasks)
+
     st.table(
         [
             {
@@ -119,9 +145,12 @@ if st.session_state.owner.tasks_ordered:
                 "description": task.description,
                 "time_minutes": task.time_minutes,
                 "frequency": task.frequency,
+                "is_completed": task.is_completed,
                 "pet_id": task.pet_id,
+                "due_date": str(task.due_date) if task.due_date else "",
+                "scheduled_time": task.scheduled_time or "",
             }
-            for task in st.session_state.owner.tasks_ordered
+            for task in sorted_tasks
         ]
     )
 else:
@@ -137,16 +166,35 @@ time_available = st.number_input("Time available today (minutes)", min_value=0, 
 if st.button("Generate schedule"):
     try:
         owner_tasks = st.session_state.scheduler.retrieveTasks(st.session_state.owner)
-        st.session_state.scheduler.makeSchedule(
+        schedule = st.session_state.scheduler.makeSchedule(
             owner_tasks=owner_tasks,
             time_available=int(time_available),
             preferences=st.session_state.owner.getPreferences(),
         )
-        st.success(f"Today's Schedule for {owner_name}")
-        schedule_rows = st.session_state.scheduler.showSchedule()
-        if schedule_rows:
-            for row in schedule_rows:
-                st.markdown(f"- {row}")
+        total_minutes = sum(task.time_minutes for task in schedule)
+        st.success(
+            f"Today's schedule for {owner_name}: {len(schedule)} tasks, {total_minutes} total minutes"
+        )
+
+        if schedule:
+            st.table(
+                [
+                    {
+                        "task_id": task.task_id,
+                        "description": task.description,
+                        "time_minutes": task.time_minutes,
+                        "frequency": task.frequency,
+                        "pet_id": task.pet_id,
+                        "due_date": str(task.due_date) if task.due_date else "",
+                        "scheduled_time": task.scheduled_time or "",
+                    }
+                    for task in schedule
+                ]
+            )
+
+            warnings = st.session_state.scheduler.showWarnings()
+            for warning_message in warnings:
+                st.warning(warning_message)
         else:
             st.info("No tasks fit into the available time.")
     except ValueError as err:
