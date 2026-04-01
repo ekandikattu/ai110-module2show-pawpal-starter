@@ -6,11 +6,60 @@
 
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
+Class Pet: (structure for all pets, including their attributes, and methods to access them)
+- Methods:
+    - getBreed
+    - getWeight
+    - getStatus
+    - setBreed
+    - setWeight
+    - setStatus
+    - showPetInfo
+
+- Attributes:
+    - breed
+    - weight
+    - health_status
+
+Class Owner: (add/remove pets from users, get/set their info and preferences)
+- Methods: 
+    - Add Pet
+    - Remove Pet
+    - showPets
+    - showOwnerInfo
+    - getPreferences
+    - setPreferences
+- Attributes: 
+    - pets
+    - gender
+    - age
+    - preferences
+
+Class Task: (add/remove/change/show tasks)
+- Methods: 
+    - add task
+    - remove task
+    - changeTask
+    - showTasks
+
+- Attributes: 
+    - tasks -> (duration, priority)
+    
+Class Scheduler: (create/show schedules)
+- Methods: 
+    - makeSchedule
+    - showSchedule
+- Attributes: 
+    - schedules
 
 **b. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
+1. added a pet_id attribute to identify pets by id rather than name (duplicate names can mess up the logic)
+2. reduced redundancy by changing explicit get/set methods in the two dataclasses, which have direct attribute access already. They now also perform validation of the values.
+3. allowed tasks as input to Scheduler.makeSchedule and the Owner class, so ensured tasks inputted via Owner only.
+4. Changed Owner methods to use ordered lists and map lookup to show and update/get values.
 
 ---
 
