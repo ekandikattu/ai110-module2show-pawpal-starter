@@ -22,6 +22,9 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Smarter Scheduling
+To help users plan their tasks better, tasks are sorted by time, frequency, filtered by priority and preferences, and checked for time conflicts to provide the best scheduling to busy pet owners to get their tasks done every time.
+
 ## Getting started
 
 ### Setup

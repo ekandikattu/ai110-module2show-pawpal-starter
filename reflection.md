@@ -69,12 +69,13 @@ Class Scheduler: (create/show schedules)
 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
 - How did you decide which constraints mattered most?
+- the scheduler considered time, priority, and preferences. I decided that priority should be first, since it directly identified what was most important, followed by time, then preferences to maximize tasks completed.
 
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
-
+- the scheduler checks for exact timestamps when checking for scheduling conflicts rather than overlapping durations. This is reasonable since we want lightweight conflict checking, which can be easily done via comparison of the timestamp values. Having to add complex time-interval math too early complicates the task, which we don't want to do in this scenario.
 ---
 
 ## 3. AI Collaboration

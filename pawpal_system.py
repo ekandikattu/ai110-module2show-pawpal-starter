@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Dict, List, Optional
 
 
@@ -16,6 +17,8 @@ class Task:
     frequency: str
     is_completed: bool = False
     pet_id: Optional[str] = None
+    due_date: Optional[date] = None
+    scheduled_time: Optional[str] = None
 
 
        
@@ -27,6 +30,8 @@ class Task:
         self.validate_frequency(self.frequency)
         self.validate_completion_status(self.is_completed)
         self.validate_pet_link(self.pet_id)
+        self.validate_due_date(self.due_date)
+        self.validate_scheduled_time(self.scheduled_time)
 
     def validate_task_id(self, task_id: str) -> None:
         """Validation rule: task_id must be non-empty and unique at Owner level."""
@@ -53,6 +58,35 @@ class Task:
         """Validation rule: pet_id may be None for owner-level tasks."""
         if pet_id is not None and (not isinstance(pet_id, str) or not pet_id.strip()):
             raise ValueError("pet_id must be None or a non-empty string")
+
+    def validate_due_date(self, due_date: Optional[date]) -> None:
+        """Validation rule: due_date may be None or a datetime.date value."""
+        if due_date is not None and not isinstance(due_date, date):
+            raise ValueError("due_date must be None or a datetime.date instance")
+
+    def validate_scheduled_time(self, scheduled_time: Optional[str]) -> None:
+        """Validation rule: scheduled_time may be None or HH:MM in 24-hour format."""
+        if scheduled_time is None:
+            return
+        if not isinstance(scheduled_time, str):
+            raise ValueError("scheduled_time must be None or a string in HH:MM format")
+        normalized = scheduled_time.strip()
+        if len(normalized) != 5 or normalized[2] != ":":
+            raise ValueError("scheduled_time must use HH:MM format")
+
+        hour, minute = normalized.split(":", 1)
+        if not (hour.isdigit() and minute.isdigit()):
+            raise ValueError("scheduled_time must use HH:MM format")
+
+        hour_value = int(hour)
+        minute_value = int(minute)
+        if not (0 <= hour_value <= 23 and 0 <= minute_value <= 59):
+            raise ValueError("scheduled_time must be a valid 24-hour time")
+
+    def setScheduledTime(self, scheduled_time: Optional[str]) -> None:
+        """Set and validate the optional task start time (HH:MM)."""
+        self.validate_scheduled_time(scheduled_time)
+        self.scheduled_time = scheduled_time.strip() if isinstance(scheduled_time, str) else None
 
     def setDescription(self, description: str) -> None:
         """Set and validate the task description."""
@@ -345,6 +379,70 @@ class Owner:
         """Retrieve a task by task identifier."""
         return self.tasks_by_id.get(task_id)
 
+    def _generate_recurring_task_id(self, base_task_id: str) -> str:
+        """Generate a unique task id for a recurring task instance."""
+        counter = 1
+        while True:
+            candidate = f"{base_task_id}-r{counter}"
+            if candidate not in self.tasks_by_id:
+                return candidate
+            counter += 1
+
+    def _create_next_occurrence_if_needed(self, completed_task: Task) -> None:
+        """Create the next task occurrence for supported recurring frequencies."""
+        frequency_to_days = {"daily": 1, "weekly": 7}
+        days = frequency_to_days.get(completed_task.frequency)
+        if days is None:
+            return
+
+        next_due_date = date.today() + timedelta(days=days)
+        next_task = Task(
+            task_id=self._generate_recurring_task_id(completed_task.task_id),
+            description=completed_task.description,
+            time_minutes=completed_task.time_minutes,
+            frequency=completed_task.frequency,
+            is_completed=False,
+            pet_id=completed_task.pet_id,
+            due_date=next_due_date,
+            scheduled_time=completed_task.scheduled_time,
+        )
+        self.addTask(next_task)
+
+    def filterTasks(
+        self,
+        is_completed: Optional[bool] = None,
+        pet_name: Optional[str] = None,
+    ) -> List[Task]:
+        """Filter tasks by completion status and/or pet name."""
+        if is_completed is not None and not isinstance(is_completed, bool):
+            raise ValueError("is_completed must be a boolean or None")
+
+        normalized_pet_name: Optional[str] = None
+        if pet_name is not None:
+            if not isinstance(pet_name, str):
+                raise ValueError("pet_name must be a string or None")
+            normalized_pet_name = pet_name.strip().lower()
+            if not normalized_pet_name:
+                raise ValueError("pet_name cannot be empty")
+
+        pet_ids_for_name: Optional[set[str]] = None
+        if normalized_pet_name is not None:
+            pet_ids_for_name = {
+                pet.pet_id
+                for pet in self.pets_ordered
+                if pet.name.strip().lower() == normalized_pet_name
+            }
+
+        filtered_tasks: List[Task] = []
+        for task in self.tasks_ordered:
+            if is_completed is not None and task.is_completed != is_completed:
+                continue
+            if pet_ids_for_name is not None and task.pet_id not in pet_ids_for_name:
+                continue
+            filtered_tasks.append(task)
+
+        return filtered_tasks
+
     def changeTask(
         self,
         task_id: str,
@@ -365,10 +463,13 @@ class Owner:
             task.setTimeMinutes(time_minutes)
         if frequency is not None:
             task.setFrequency(frequency)
+        was_completed = task.is_completed
         if is_completed is not None:
             task.mark_complete(is_completed)
+            if not was_completed and task.is_completed:
+                self._create_next_occurrence_if_needed(task)
 
-        if pet_id != task.pet_id:
+        if pet_id is not None and pet_id != task.pet_id:
             if pet_id is not None and pet_id not in self.pets_by_id:
                 raise ValueError(f"Cannot move task: pet_id '{pet_id}' does not exist")
 
@@ -389,7 +490,8 @@ class Owner:
             (
                 f"Task(task_id={task.task_id}, description={task.description}, "
                 f"time_minutes={task.time_minutes}, frequency={task.frequency}, "
-                f"is_completed={task.is_completed}, pet_id={task.pet_id})"
+                f"is_completed={task.is_completed}, pet_id={task.pet_id}, due_date={task.due_date}, "
+                f"scheduled_time={task.scheduled_time})"
             )
             for task in self.tasks_ordered
         ]
@@ -400,6 +502,31 @@ class Scheduler:
         """Initialize scheduler state for current and historical plans."""
         self.last_plan: List[Task] = []
         self.plan_history: List[List[Task]] = []
+        self.last_warnings: List[str] = []
+
+    def detectTimeConflicts(self, tasks: List[Task]) -> List[str]:
+        """Detect same-time task conflicts and return warning messages."""
+        tasks_by_time: Dict[str, List[Task]] = {}
+        for task in tasks:
+            if task.scheduled_time is None:
+                continue
+            tasks_by_time.setdefault(task.scheduled_time, []).append(task)
+
+        warnings: List[str] = []
+        for scheduled_time in sorted(tasks_by_time):
+            conflicting_tasks = tasks_by_time[scheduled_time]
+            if len(conflicting_tasks) < 2:
+                continue
+
+            task_labels = ", ".join(
+                f"{task.task_id} ({task.description}, pet_id={task.pet_id})"
+                for task in conflicting_tasks
+            )
+            warnings.append(
+                f"Warning: {len(conflicting_tasks)} tasks are scheduled at {scheduled_time}: {task_labels}"
+            )
+
+        return warnings
 
     def makeSchedule(
         self,
@@ -439,7 +566,12 @@ class Scheduler:
 
         self.last_plan = list(plan)
         self.plan_history.append(list(plan))
+        self.last_warnings = self.detectTimeConflicts(self.last_plan)
         return list(plan)
+
+    def showWarnings(self) -> List[str]:
+        """Return warnings from the most recent scheduling run."""
+        return list(self.last_warnings)
 
     def retrieveTasks(self, owner: Owner) -> List[Task]:
         """Retrieve a copy of all owner-managed tasks."""
@@ -462,7 +594,8 @@ class Scheduler:
         return [
             (
                 f"{task.description} ({task.time_minutes} min, {task.frequency}, "
-                f"completed={task.is_completed}, pet_id={task.pet_id})"
+                f"completed={task.is_completed}, pet_id={task.pet_id}, due_date={task.due_date}, "
+                f"scheduled_time={task.scheduled_time})"
             )
             for task in self.last_plan
         ]
