@@ -25,6 +25,14 @@ Your final app should:
 ## Smarter Scheduling
 To help users plan their tasks better, tasks are sorted by time, frequency, filtered by priority and preferences, and checked for time conflicts to provide the best scheduling to busy pet owners to get their tasks done every time.
 
+## Testing PawPal+
+Command to Run Tests:
+```bash
+python -m pytest
+```
+These tests cover sorting, conflicts, recurrent creation, id collision handling, id generation, input validation around scheduling fields, and some other logic. Overall, they form a comprehensive suite of tests to ensure the app logic flows smoothly. 
+Confidence Level: 4 Stars
+
 ## Getting started
 
 ### Setup

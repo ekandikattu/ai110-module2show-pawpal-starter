@@ -395,7 +395,8 @@ class Owner:
         if days is None:
             return
 
-        next_due_date = date.today() + timedelta(days=days)
+        base_due_date = completed_task.due_date or date.today()
+        next_due_date = base_due_date + timedelta(days=days)
         next_task = Task(
             task_id=self._generate_recurring_task_id(completed_task.task_id),
             description=completed_task.description,
